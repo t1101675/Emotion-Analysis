@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class RNNModel(nn.Module):
     def __init__(self, args, vocab_size, target_size):
@@ -13,21 +14,27 @@ class RNNModel(nn.Module):
         self.embedding_size = args.embedding_size
         self.num_layers = args.num_layers
 
-        self.lstm = nn.LSTM(input_size = self.embedding_size, hidden_size = self.hidden_dim, dropout = self.dropout, num_layers = self.num_layers)
+        self.lstm = nn.LSTM(input_size = self.embedding_size, hidden_size = self.hidden_dim, dropout = self.dropout, num_layers = self.num_layers, batch_first=True)
         self.hidden_2_target = nn.Linear(self.hidden_dim, self.target_size)
-        self.hidden = self.init_hidden()
+        self.h = self.init_h()
+        self.c = self.init_c()
         self.word_embeddings = nn.Embedding(self.vocab_size, self.embedding_size)
         
+    def init_c(self):
+        return torch.zeros(self.num_layers, self.batch_size, self.hidden_dim).cuda()
 
-    def init_hidden(self):
-        return torch.zeros(self.num_layers, self.batch_size, self.hidden_dim)
+    def init_h(self):
+        return torch.zeros(self.num_layers, self.batch_size, self.hidden_dim).cuda()
 
-    def forward(self, batch):
-        embeds = self.word_embeddings(batch)
-        out, _ = self.lstm(embeds, self.hidden)
-        target_space = self.hidden_2_target(out)
-        score = F.log_softmax(target_space)
-        return score
+    def forward(self, passage_data, lengths):
+        embeds = self.word_embeddings(passage_data)
+        packed_embeds = pack_padded_sequence(embeds, lengths, batch_first=True)
+        out, (hn, cn) = self.lstm(packed_embeds, (self.h, self.c))
+        #unpacked_out, _ = pad_packed_sequence(out, batch_first=True)
+        #print("hn:", hn[-1, :, :].size())
+        target_space = self.hidden_2_target(hn[-1, :, :])
+        #score = F.softmax(target_space, dim=1)
+        return target_space
 
 class CNNModel(nn.Module):
     def __init__(self, args, vocab_size):
