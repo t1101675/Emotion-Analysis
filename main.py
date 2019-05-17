@@ -22,7 +22,9 @@ def main():
     if (args.model == "rnn"):
         myModel = model.RNNModel(args, data_loader.vocab_size, 8, data_loader.id_2_vec).cuda()
     elif (args.model == "cnn"):
-        myModel = model.CNNModel(args, data_loader.vocab_size)
+        myModel = model.CNNModel(args, data_loader.vocab_size, 8, data_loader.id_2_vec).cuda()
+    elif (args.model == "baseline"):
+        myModel = model.Baseline(args, data_loader.vocab_size, 8, data_loader.id_2_vec).cuda()
     else:
         print("invalid model type")
         exit(1)
@@ -53,7 +55,7 @@ def train(model, data_loader, args):
         print("[!] epoch: {}".format(epoch))
         total_loss = 0
         for i in tqdm(range(len(passage_data))):
-            model.zero_grad()
+            optimizer.zero_grad()
             score = model(passage_data[i], lengths[i])
             loss = loss_func(score, target_data[i])
             total_loss += loss.item()
@@ -73,7 +75,6 @@ def test(model, data_loader, args):
     test_total_loss = 0
     corret = 0
     for i in tqdm(range(len(passage_data))):
-        model.zero_grad()
         score = model(passage_data[i], lengths[i])
         loss = loss_func(score, target_data[i])
         test_total_loss += loss.item()
