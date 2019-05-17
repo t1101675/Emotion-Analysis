@@ -13,11 +13,26 @@ class DataLoader(object):
         self.train_data = []
         self.test_data = []
         self.valid_data = []
+        self.pre_vector = args.pre_vector
+        self.id_2_vec = []
+        self.vec_len = 0
 
     def process_data(self):
+        if self.pre_vector:
+            f_vec = open(os.path.join(self.data_dir, self.pre_vector), "r")
+            vec_L = f_vec.readlines()
+            vec_dict = {}
+            self.vec_len = int(vec_L[0].split(" ")[1])
+            for i in range(1, len(vec_L)):
+                tempL = vec_L[i].strip().split(" ")
+                vec_dict[tempL[0]] = [float(x) for x in tempL[1:]]
+       
+        self.word_2_id["<pad>"] = 0
+        self.id_2_vec = [[0 for i in range(self.vec_len)]]
         for _, _, files in os.walk(self.data_dir):
             for filename in files:
-                if (filename == "word_2_id.json"):
+                file_type = filename.split(".")[-1]
+                if (file_type not in ["in"]):
                     continue
                 f = open(os.path.join(self.data_dir, filename), "r")
                 raw = f.readlines()
@@ -27,11 +42,20 @@ class DataLoader(object):
                     for word in tempL_passage:
                         if word not in self.word_2_id:
                             self.word_2_id[word] = id
+                            if self.pre_vector:
+                                try:
+                                    self.id_2_vec.append(vec_dict[word])
+                                except(KeyError):
+                                    self.id_2_vec.append([0 for i in range(self.vec_len)])
                             id += 1
-        self.word_2_id["<pad>"] = 0
+        
         self.vocab_size = len(self.word_2_id)
         f = open(os.path.join(self.data_dir, "word_2_id.json"), "w")
         f.write(json.dumps(self.word_2_id, ensure_ascii=False)) 
+        if  self.pre_vector:   
+            f_id2Vec = open(os.path.join(self.data_dir, self.pre_vector + ".vec.json"), "w")
+            f_id2Vec.write(json.dumps(self.id_2_vec))
+
 
     def load_from_file(self, filename):
         f = open(filename, "r")
@@ -76,13 +100,24 @@ class DataLoader(object):
         except(FileNotFoundError):
             self.process_data()
             f = open(os.path.join(self.data_dir, "word_2_id.json"), "r")
-
+        print("[!] Loading word to index ", end="")
         self.word_2_id = json.loads(f.read())
+        print("Done!")
         self.vocab_size = len(self.word_2_id)
+        print("[!] Loading train data ", end="")
         self.train_data = self.load_from_file(os.path.join(self.data_dir, "train.in"))
+        print("Done!")
+        print("[!] Loading test data ", end="")
         self.test_data = self.load_from_file(os.path.join(self.data_dir, "test.in"))
+        print("Done!")       
+        print("[!] Loading valid data ", end="")
         self.valid_data = self.load_from_file(os.path.join(self.data_dir, "test.in"))
-        pass
+        print("Done!")
+        if (self.pre_vector):
+            print("[!] Loading pretrained embeding ", end="")
+            f = open(os.path.join(self.data_dir, self.pre_vector + ".vec.json"), "r")
+            self.id_2_vec = json.loads(f.read())
+            print("Done!")
 
     def get_data(self, data_type):
         if data_type == "train":

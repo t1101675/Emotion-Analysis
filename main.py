@@ -20,7 +20,7 @@ def main():
 
     data_loader.load()
     if (args.model == "rnn"):
-        myModel = model.RNNModel(args, data_loader.vocab_size, 8).cuda()
+        myModel = model.RNNModel(args, data_loader.vocab_size, 8, data_loader.id_2_vec).cuda()
     elif (args.model == "cnn"):
         myModel = model.CNNModel(args, data_loader.vocab_size)
     else:
@@ -30,10 +30,10 @@ def main():
     if (args.test_only):
         test(myModel, data_loader, args)
     else:
-        train_rnn(myModel, data_loader, args)
+        train(myModel, data_loader, args)
     
 
-def train_rnn(model, data_loader, args):
+def train(model, data_loader, args):
     #print(target_data)
     #passage_data, target_data, lengths = format_batch_rnn(train_data, args.batch_size, args.loss)
     passage_data, target_data, lengths = data_loader.get_data("train")
