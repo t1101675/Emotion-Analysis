@@ -16,6 +16,7 @@ class DataLoader(object):
         self.pre_vector = args.pre_vector
         self.id_2_vec = []
         self.vec_len = 0
+        self.fix_length = args.fix_length
 
     def process_data(self):
         if self.pre_vector:
@@ -68,9 +69,9 @@ class DataLoader(object):
             tempL_target = tempL[1].strip().split(" ")
             total = float(tempL_target[0].split(":")[1])
             target_L = [float(x.split(":")[1]) / float(total) for x in tempL_target[1:]]
-            if (self.target_type == "CEL"):
+            if self.target_type == "CEL":
                 target = target_L.index(max(target_L))
-            elif (self.target_type == "MSE"):
+            elif self.target_type == "MSE":
                 target = target_L
             passage_L = [self.word_2_id[word] for word in tempL_passage]
             data.append((passage_L, target))
@@ -81,16 +82,20 @@ class DataLoader(object):
         passage_data = []
         target_data = []
         lengths = []
+        data_sorted = sorted(data, key=lambda item: len(item[0]), reverse=True)
+        data_padded = pad_sequence([torch.LongTensor(item[0]).cuda() for item in data], batch_first=True)
+        if self.fix_length:
+            data_padded = [item[0:self.fix_length] for item in data_padded]
         for k in range(0, num):
-            batch = data[k: k + self.batch_size]
-            batch = sorted(batch, key=lambda item: len(item[0]), reverse=True)
-            padded_passage = pad_sequence([torch.LongTensor(item[0]).cuda() for item in batch], batch_first=True)
-            passage_data.append(padded_passage)
+            batch = data_sorted[k: k + self.batch_size]
+            #batch = sorted(batch, key=lambda item: len(item[0]), reverse=True)
+            #padded_passage = pad_sequence([torch.LongTensor(item[0]).cuda() for item in batch], batch_first=True)
+            passage_data.append(data_padded[k: k + self.batch_size])
             lengths.append(torch.LongTensor([len(item[0]) for item in batch]).cuda())
             if self.target_type == "CEL":
                 target_data.append((torch.LongTensor([item[1] for item in batch]).cuda()))
-            elif self.target_type == "MSE":
-                target_data.append((torch.FloatTensor([item[1] for item in batch]).cuda()))
+            else:
+                target_data.append((torch.FloatTensor([item[2] for item in batch]).cuda()))
 
         return passage_data, target_data, lengths
 
