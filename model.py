@@ -52,7 +52,6 @@ class CNNModel(nn.Module):
             self.word_embeddings = nn.Embedding.from_pretrained(torch.FloatTensor(id_2_vec), freeze=not args.finetune_pv)
             #self.word_embeddings.weight.requires_grad = True
             self.embedding_size = self.word_embeddings.weight.size()[1]
-            print(self.embedding_size)
         else:
             self.word_embeddings = nn.Embedding(self.vocab_size, self.embedding_size)
         
