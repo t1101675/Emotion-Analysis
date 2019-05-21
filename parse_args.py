@@ -19,4 +19,5 @@ parser.add_argument("--optim", type=str, default="SGD", help="optimizer SGD or A
 parser.add_argument("--loss", type=str, default="CEL", help="loss")
 parser.add_argument("--pre_vector", type=str, default="", help="pretrained vector path")
 parser.add_argument("--finetune_pv", action="store_true", default=False, help="whether to finetune the pre-trained vectors")
+parser.add_argument("--fix_length", type=int, default=0)
 args = parser.parse_args()
