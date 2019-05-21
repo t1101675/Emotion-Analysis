@@ -91,9 +91,14 @@ class Baseline(nn.Module):
 
     def forward(self, passage_data, lengths):
         embeds = self.word_embeddings(passage_data)
+        x = embeds.unsqueeze(1)
+        #print(x.size())
         x = self.hidden(embeds)
         x = F.relu(x)
+        #print(x.size())
+        x, _ = torch.max(x, 1)
+        #print(x.size())
         target_space = self.output(x)
-        print(target_space.size())
+        #print(target_space.size())
         return target_space
         
